@@ -1,14 +1,20 @@
 const { Telegraf } = require('telegraf');
 
-// !!! ВАЖНО: Замените 'YOUR_BOT_TOKEN' на реальный токен вашего бота из BotFather
-const bot = new Telegraf(7485417933:AAEDwQG3F8yDO9hOMkDTGw23kYJ130p_eNI);
+// Безопасно получаем токен из переменных окружения Vercel
+// Мы не вставляем токен прямо сюда, а будем хранить его на сервере Vercel
+const BOT_TOKEN = process.env.BOT_TOKEN || '7485417933:AAEDwQG3F8yDO9hOMkDTGw23kYJ130p_eNI';
 
-// !!! ВАЖНО: Укажите здесь URL вашего веб-приложения, которое вы уже развернули
-const WEB_APP_URL = 'https://kosovetis.github.io/reactjs-template/'; // Пример на основе вашего package.json
+// URL вашего развернутого веб-приложения (фронтенда)
+const WEB_APP_URL = 'https://mini-landing-black.vercel.app/';
+
+if (!BOT_TOKEN) {
+  throw new Error('BOT_TOKEN must be provided!');
+}
+
+const bot = new Telegraf(BOT_TOKEN);
 
 // Обработчик команды /start
 bot.start((ctx) => {
-  // Отправляем приветственное сообщение с кнопкой для открытия Web App
   ctx.reply('Добро пожаловать! Нажмите на кнопку ниже, чтобы запустить приложение.', {
     reply_markup: {
       // Создаем кнопку, которая открывает Web App
@@ -19,11 +25,14 @@ bot.start((ctx) => {
   });
 });
 
-// Запускаем бота
-bot.launch();
-
-console.log('Бот запущен...');
-
-// Нужно для корректной остановки бота (необязательно, но хорошая практика)
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+// Экспортируем обработчик, чтобы Vercel мог его использовать
+module.exports = async (req, res) => {
+  try {
+    // Передаем обновления от Telegram в наш бот
+    await bot.handleUpdate(req.body);
+  } catch (err) {
+    console.error('Error handling update:', err);
+  }
+  // Отвечаем Telegram, что все в порядке
+  res.status(200).send('OK');
+};
